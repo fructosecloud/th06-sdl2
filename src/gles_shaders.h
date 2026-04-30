@@ -9,6 +9,10 @@ namespace th06
 {
 
 // ---------- Vertex Shader (shared by all modes) ----------
+// Inputs:  a_Position (vec3), a_Color (vec4), a_TexCoord (vec2)
+// Uniforms: u_MVP (mat4), u_TexMatrix (mat4)
+// Outputs:  v_Color, v_TexCoord, v_FogFactor
+
 static const char *kGLES_VertexShader = R"glsl(
 attribute vec4 a_Position;
 attribute vec4 a_Color;
@@ -45,12 +49,18 @@ void main()
     }
     else
     {
-        v_FogFactor = 1.0;
+        v_FogFactor = 1.0; // no fog
     }
 }
 )glsl";
 
 // ---------- Fragment Shader ----------
+
+// Mode 0: GL_MODULATE  outColor = texColor * v_Color
+// Mode 1: GL_ADD       outColor.rgb = texColor.rgb + v_Color.rgb; outColor.a = texColor.a * v_Color.a
+// u_TextureEnabled: if 0, output = v_Color (no texture)
+// Alpha test: discard if final alpha < u_AlphaRef
+
 static const char *kGLES_FragmentShader = R"glsl(
 #ifdef GL_ES
 precision mediump float;
