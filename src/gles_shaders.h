@@ -9,10 +9,6 @@ namespace th06
 {
 
 // ---------- Vertex Shader (shared by all modes) ----------
-// Inputs:  a_Position (vec3), a_Color (vec4), a_TexCoord (vec2)
-// Uniforms: u_MVP (mat4), u_TexMatrix (mat4)
-// Outputs:  v_Color, v_TexCoord, v_FogFactor
-
 static const char *kGLES_VertexShader = R"glsl(
 attribute vec4 a_Position;
 attribute vec4 a_Color;
@@ -21,17 +17,16 @@ attribute float a_FogFactor;
 
 uniform mat4 u_MVP;
 uniform mat4 u_TexMatrix;
-
-// Fog: linear, computed in eye-space (needs modelview z)
-uniform int  u_FogEnabled;
+uniform bool u_FogEnabled;
 uniform float u_FogStart;
 uniform float u_FogEnd;
 uniform mat4 u_ModelView;
-uniform int u_UseVertexFog;
+uniform bool u_UseVertexFog;
 
-varying vec4 v_Color;
-varying vec2 v_TexCoord;
-varying float v_FogFactor;
+// Explicit mediump precision for all varyings (required by Mali drivers)
+varying mediump vec4 v_Color;
+varying mediump vec2 v_TexCoord;
+varying mediump float v_FogFactor;
 
 void main()
 {
@@ -39,49 +34,43 @@ void main()
     v_Color     = a_Color;
     v_TexCoord  = (u_TexMatrix * vec4(a_TexCoord, 0.0, 1.0)).xy;
 
-    if (u_UseVertexFog != 0)
+    if (u_UseVertexFog)
     {
         v_FogFactor = a_FogFactor;
     }
-    // Linear fog: factor = (end - |eye_z|) / (end - start), clamped [0,1]
-    else if (u_FogEnabled != 0)
+    else if (u_FogEnabled)
     {
         float eyeZ = -(u_ModelView * a_Position).z;
         v_FogFactor = clamp((u_FogEnd - eyeZ) / (u_FogEnd - u_FogStart), 0.0, 1.0);
     }
     else
     {
-        v_FogFactor = 1.0; // no fog
+        v_FogFactor = 1.0;
     }
 }
 )glsl";
 
 // ---------- Fragment Shader ----------
-// Mode 0: GL_MODULATE  outColor = texColor * v_Color
-// Mode 1: GL_ADD       outColor.rgb = texColor.rgb + v_Color.rgb; outColor.a = texColor.a * v_Color.a
-// u_TextureEnabled: if 0, output = v_Color (no texture)
-// Alpha test: discard if final alpha < u_AlphaRef
-
 static const char *kGLES_FragmentShader = R"glsl(
 #ifdef GL_ES
 precision mediump float;
 #endif
 
-varying vec4  v_Color;
-varying vec2  v_TexCoord;
-varying float v_FogFactor;
+varying mediump vec4 v_Color;
+varying mediump vec2 v_TexCoord;
+varying mediump float v_FogFactor;
 
 uniform sampler2D u_Texture;
-uniform int   u_TextureEnabled;
-uniform int   u_ColorOp;       // 0=modulate, 1=add
-uniform float u_AlphaRef;      // alpha test threshold (e.g. 4/255)
-uniform int   u_FogEnabled;
-uniform vec4  u_FogColor;
+uniform bool   u_TextureEnabled;
+uniform int    u_ColorOp;       // 0=modulate, 1=add
+uniform float  u_AlphaRef;
+uniform bool   u_FogEnabled;
+uniform vec4   u_FogColor;
 
 void main()
 {
     vec4 color;
-    if (u_TextureEnabled != 0)
+    if (u_TextureEnabled)
     {
         vec4 tex = texture2D(u_Texture, v_TexCoord);
         if (u_ColorOp == 0)
@@ -100,12 +89,10 @@ void main()
         color = v_Color;
     }
 
-    // Alpha test (discard instead of GL_ALPHA_TEST)
     if (color.a < u_AlphaRef)
         discard;
 
-    // Linear fog
-    if (u_FogEnabled != 0)
+    if (u_FogEnabled)
     {
         color.rgb = mix(u_FogColor.rgb, color.rgb, v_FogFactor);
     }
