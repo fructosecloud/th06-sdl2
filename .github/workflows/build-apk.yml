@@ -33,7 +33,7 @@ jobs:
         accept-android-sdk-licenses: true
         # 指定需要的构建工具版本和 CMake 版本
         cmdline-tools-version: 11076708
-        extra-packages: |
+        packages: |
           build-tools;34.0.0
           make;3.18.1
           ndk;21.4.7075529
