@@ -107,6 +107,7 @@ jobs:
         TH06_STORE_PASSWORD: ${{ secrets.TH06_STORE_PASSWORD }}
         TH06_KEY_PASSWORD: ${{ secrets.TH06_KEY_PASSWORD }}
       run: |
+        cd android
         chmod +x gradlew
         ./gradlew assembleRelease --stacktrace
 
