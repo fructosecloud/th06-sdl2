@@ -2,7 +2,7 @@ name: build apk
 
 on:
   push:
-    branches: [ dev ]
+    ((branches: [ dev ]
   workflow_dispatch:
 
 jobs:
@@ -85,9 +85,9 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         # --- 1 下载上游预发布版 APK ---
-        REPO_OWNER="happyhavoc"            # 上游仓库所有者
-        REPO_NAME="th06"                   # 上游仓库名
-        TAG_NAME="v1.0.0-pre"              # 资源的预发布 Tag
+        REPO_OWNER="CNTianQi233"            # 上游仓库所有者
+        REPO_NAME="th06-sdl2"                   # 上游仓库名
+        TAG_NAME="Preview"              # 资源的预发布 Tag
           
         gh release download "$TAG_NAME" --repo "$REPO_OWNER/$REPO_NAME" --pattern "*.apk" --output upstream.apk 
         
