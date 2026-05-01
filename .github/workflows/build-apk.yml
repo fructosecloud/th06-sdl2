@@ -95,12 +95,12 @@ jobs:
         cp -r upstream_unzip/assets/* build-sdl2/Release
 
     - name: Decode and verify keystore
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_SHA256: ${{ secrets.KEYSTORE_SHA256 }}
-        run: |
-          printf '%s' "$KEYSTORE_BASE64" | base64 -d > android/th06-debug.keystore
-          [[ "$(sha256sum android/th06-debug.keystore | cut -d' ' -f1)" == "$KEYSTORE_BASE64" ]] || { echo "Keystore corrupted"; exit 1; }
+      env:
+        KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        KEYSTORE_SHA256: ${{ secrets.KEYSTORE_SHA256 }}
+      run: |
+        printf '%s' "$KEYSTORE_BASE64" | base64 -d > android/th06-debug.keystore
+        [[ "$(sha256sum android/th06-debug.keystore | cut -d' ' -f1)" == "$KEYSTORE_SHA256" ]] || { echo "Keystore corrupted"; exit 1; }
         
         
     - name: Build Release APK
