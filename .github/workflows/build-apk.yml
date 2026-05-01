@@ -66,7 +66,7 @@ jobs:
     # 创建资源文件夹
     - name: Mkdir build-sdl2
       run: |
-        mkdir -p build-sdl2/Release/
+        mkdir -p ${{ github.workspace }}/build-sdl2/Release/
     
     # Vulkan着色器编译
     - name: Compile Vulkan shaders
@@ -92,7 +92,7 @@ jobs:
         mkdir upstream_assets
         unzip -q upstream.apk -d upstream_unzip
         rm -rf upstream_unzip/assets/shaders_vk
-        cp -r upstream_unzip/assets/* build-sdl2/Release
+        cp -r upstream_unzip/assets/* ${{ github.workspace }}/build-sdl2/Release
 
     - name: Decode and verify keystore
       env:
