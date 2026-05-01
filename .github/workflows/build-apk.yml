@@ -1,0 +1,120 @@
+name: build apk
+
+on:
+  #push:
+    #branches: [ dev ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+    
+    # ========== 基础环境 ==========    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'        
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Set up Android SDK and NDK
+      uses: android-actions/setup-android@v3
+      with:
+        # 接受 Android SDK 许可证
+        accept-android-sdk-licenses: true
+        # 指定需要的构建工具版本和 CMake 版本
+        cmdline-tools-version: 11076708
+        extra-packages: |
+          build-tools;34.0.0
+          make;3.18.1
+          ndk;21.4.7075529
+        
+    # 可选：安装 glslangValidator（Vulkan 着色器编译）
+    - name: Install glslangValidator
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y glslang-tools
+        glslangValidator --version
+      continue-on-error: true    
+
+    # 项目仓库中不包含 SDL2 源码，必须手动下载
+    - name: Download SDL2 source
+      run: |
+        wget https://github.com/libsdl-org/SDL/releases/download/release-2.32.8/SDL2-2.32.8.tar.gz
+        mkdir -p android/SDL2_src
+        tar -xzf SDL2-2.32.8.tar.gz -C android/SDL2_src --strip-components=1
+
+    - name: Download SDL2_image source
+      run: |
+        wget https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.2/SDL2_image-2.8.2.tar.gz
+        mkdir -p android/SDL2_image_src
+        tar -xzf SDL2_image-2.8.2.tar.gz -C android/SDL2_image_src --strip-components=1
+
+    - name: Download SDL2_mixer source
+      run: |
+        wget https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.6.3/SDL2_mixer-2.6.3.tar.gz
+        mkdir -p android/SDL2_mixer_src
+        tar -xzf SDL2_mixer-2.6.3.tar.gz -C android/SDL2_mixer_src --strip-components=1
+    
+    # ========== 准备游戏资源 ===========
+    # 创建资源文件夹
+    - name: Mkdir build-sdl2
+      run: |
+        mkdir -p build-sdl2/Release/
+    
+    # Vulkan着色器编译
+    - name: Compile Vulkan shaders
+      run: |
+        mkdir -p build-sdl2/Release/shaders_vk
+        for file in shaders_vk/*.vert shaders_vk/*.frag; do
+          [ -f "$file" ] && glslangValidator -V "$file" -o "build-sdl2/Release/shaders_vk/$(basename "$file").spv"
+        done
+    
+    # 从上游预发布版 APK 中提取并覆盖资源
+    - name: Prepare Prebuilt Game Assets
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # --- 1 下载上游预发布版 APK ---
+        REPO_OWNER="happyhavoc"            # 上游仓库所有者
+        REPO_NAME="th06"                   # 上游仓库名
+        TAG_NAME="v1.0.0-pre"              # 资源的预发布 Tag
+          
+        gh release download "$TAG_NAME" --repo "$REPO_OWNER/$REPO_NAME" --pattern "*.apk" --output upstream.apk 
+        
+        # --- 2 解压到目标目录 ---
+        mkdir upstream_assets
+        unzip -q upstream.apk -d upstream_unzip
+        rm -rf upstream_unzip/assets/shaders_vk
+        cp -r upstream_unzip/assets/* build-sdl2/Release
+
+    - name: Decode keystore
+      run: |
+        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/th06-debug.keystore        
+        
+    - name: Build Release APK
+      env:
+        # 签名密码从 GitHub Secrets 读取，若未设置则为空字符串
+        TH06_STORE_PASSWORD: ${{ secrets.TH06_STORE_PASSWORD }}
+        TH06_KEY_PASSWORD: ${{ secrets.TH06_KEY_PASSWORD }}
+      run: |
+        chmod +x gradlew
+        ./gradlew assembleRelease --stacktrace
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: th06-release-apk
+        path: android/app/build/outputs/apk/release/*.apkrtifact@v4
+      with:
+        name: th06-release-apk
+        path: android/app/build/outputs/apk/release/*.apk
