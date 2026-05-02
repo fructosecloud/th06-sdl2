@@ -2,7 +2,7 @@ name: build apk
 
 on:
   push:
-    ((branches: [ dev ]
+    branches: [ "dev" , "debug/workflows" ]
   workflow_dispatch:
 
 jobs:
@@ -102,7 +102,17 @@ jobs:
         printf '%s' "$KEYSTORE_BASE64" | base64 -d > android/th06-debug.keystore
         [[ "$(sha256sum android/th06-debug.keystore | cut -d' ' -f1)" == "$KEYSTORE_SHA256" ]] || { echo "Keystore corrupted"; exit 1; }
         
-        
+    - name: Bebug task syncGameAssets
+      run: |
+        cd android
+        chmod +x gradlew
+        ./gradlew syncGameAssets --info --stacktrace --no-daemon
+        if [ $? -ne 0 ]; then
+          echo "syncGameAssets FAILED"
+          exit 1
+        fi
+          echo "syncGameAssets Successful"
+      
     - name: Build Release APK
       env:
         # 签名密码从 GitHub Secrets 读取，若未设置则为空字符串
@@ -112,6 +122,7 @@ jobs:
         cd android
         chmod +x gradlew
         ./gradlew assembleRelease --stacktrace
+
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
