@@ -89,9 +89,9 @@ jobs:
         gh release download "$TAG_NAME" --repo "$REPO_OWNER/$REPO_NAME" --pattern "*.apk" --output upstream.apk 
         
         # --- 2 解压到目标目录 ---
-        mkdir upstream_assets
         unzip -q upstream.apk -d upstream_unzip
         rm -rf upstream_unzip/assets/shaders_vk
+        mv upstream_unzip/assets/bgm upstream_unzip/assets/BGM
         cp -r upstream_unzip/assets/* ${{ github.workspace }}/build_sdl2/Release
 
     - name: Decode and verify keystore
