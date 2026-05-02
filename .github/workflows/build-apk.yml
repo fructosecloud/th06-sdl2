@@ -104,15 +104,15 @@ jobs:
         
     - name: Bebug task syncGameAssets
       run: |
+        sudo apt update
+        sudo apt install tree
+        tree
         cd android
         chmod +x gradlew
         ./gradlew syncGameAssets --info --stacktrace --no-daemon
-        if [ $? -ne 0 ]; then
-          echo "syncGameAssets FAILED"
-          exit 1
-        fi
-          echo "syncGameAssets Successful"
-      
+        echo "breakpoint debugging"
+        exit 1
+        
     - name: Build Release APK
       env:
         # 签名密码从 GitHub Secrets 读取，若未设置则为空字符串
